@@ -1,5 +1,5 @@
 import gi
-import time
+import json
 import mysql.connector
 
 gi.require_version('Gtk', '3.0')
@@ -47,30 +47,38 @@ class MealTypeWindow(Gtk.Window):
             # Pobierz wprowadzony tekst z pola wyszukiwania
             search_text = self.search_entry.get_text()
 
+            # Odczytaj dane z pliku konfiguracyjnego
+            with open('config.json') as config_file:
+                config = json.load(config_file)
+
+            db_host = config['db_host']
+            db_user = config['db_user']
+            db_password = config['db_password']
+            db_name = config['db_name']
+
             # Ustanowienie połączenia z bazą danych
             mydb = mysql.connector.connect(
-                host="localhost",
-                user="nazwa_uzytkownika",
-                password="haslo",
-                database="nazwa_bazy_danych"
+                host=db_host,
+                user=db_user,
+                password=db_password,
+                database=db_name
             )
+            # Tworzenie kursora
             mycursor = mydb.cursor()
 
-            # Wykonaj zapytanie SQL z uwzględnieniem wprowadzonego tekstu
-            query = "SELECT * FROM kolacje WHERE Nazwa LIKE %s"
-            mycursor.execute(query, ('%' + search_text + '%',))
+            # Wykonanie zapytania SQL
+            mycursor.execute("SELECT * FROM kolacje")
 
-            # Pobierz wyniki zapytania
+            # Pobranie wyników zapytania
             result = mycursor.fetchall()
 
-            # Wyświetl wyniki (tutaj będziemy kontynuować w kolejnym kroku)
+            # Wyświetlenie wyników
             for row in result:
                 print(row)
 
-            # Zamknij połączenie
+            # Zamknięcie połączenia
             mydb.close()
 
-            self.search_entry.set_sensitive(True)
 
 win = MealTypeWindow() # Tworzy obiekt klasy MealTypeWindow.
 win.connect("destroy", Gtk.main_quit) # Łączy zdarzenie zniszczenia okna z funkcją Gtk.main_quit, która zamyka aplikację.
