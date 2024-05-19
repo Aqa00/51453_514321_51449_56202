@@ -12,7 +12,7 @@ class MealTypeWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Program do przepisów")
         self.set_border_width(10)
-        self.set_default_size(800, 600)
+        self.set_default_size(1897, 927)  # Ustawienie początkowej rozdzielczości okna
 
         self.grid = Gtk.Grid()
         self.grid.set_column_spacing(10)
@@ -52,7 +52,48 @@ class MealTypeWindow(Gtk.Window):
         self.meal_combo.connect("changed", self.on_meal_combo_changed)
         self.search_entry.connect("activate", self.on_search_activate)
 
+        self.load_tags()
+
         self.show_all()
+
+    def load_tags(self):
+        try:
+            with open('config.json') as config_file:
+                config = json.load(config_file)
+
+            mydb = mysql.connector.connect(
+                host=config['db_host'],
+                user=config['db_user'],
+                password=config['db_password'],
+                database=config['db_name']
+            )
+
+            mycursor = mydb.cursor()
+            query = "SELECT DISTINCT Tagi FROM (SELECT Tagi FROM sniadania UNION ALL SELECT Tagi FROM obiady UNION ALL SELECT Tagi FROM kolacje) as all_tags"
+            mycursor.execute(query)
+
+            result = mycursor.fetchall()
+            tags = set()
+            for row in result:
+                for tag in row[0].split(','):
+                    words = tag.strip().split()
+                    tags.update(words)
+
+            self.flowbox = Gtk.FlowBox()
+            self.flowbox.set_max_children_per_line(10)
+            self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
+            self.grid.attach(self.flowbox, 0, 4, 3, 1)
+
+            for tag in tags:
+                button = Gtk.Button(label=tag.strip())
+                button.connect("clicked", self.on_tag_button_clicked)
+                self.flowbox.add(button)
+
+        except Error as e:
+            self.display_error_message(str(e))
+        finally:
+            if mydb.is_connected():
+                mydb.close()
 
     def create_recipe_screen(self, recipes):
         self.clear_grid()
@@ -61,15 +102,15 @@ class MealTypeWindow(Gtk.Window):
         self.back_button.connect("clicked", self.on_back_button_clicked)
         self.grid.attach(self.back_button, 0, 0, 1, 1)
 
-        self.recipe_list_store = Gtk.ListStore(str, str, str, str, str, str)  # Usunięto pole Id_posilku
+        self.recipe_list_store = Gtk.ListStore(str, str, str, str, str)  # Usunięto pole Id_posilku
 
         for recipe in recipes:
-            self.recipe_list_store.append(recipe[1:])  # Pominięto pierwszy element (Id_posilku)
+            self.recipe_list_store.append(recipe[1:6])  # Pominięto pierwszy element (Id_posilku) i ostatni (Tagi)
 
         self.recipe_tree_view = Gtk.TreeView(model=self.recipe_list_store)
         renderer = Gtk.CellRendererText(wrap_width=1000, wrap_mode=Pango.WrapMode.WORD)
         for i, column_title in enumerate(
-                ["Nazwa", "Obraz", "Czas_przygotowania", "Skladniki", "Sposob_przygotowania", "Tagi"]):
+                ["Nazwa", "Obraz", "Czas_przygotowania", "Skladniki", "Sposob_przygotowania"]):
             column = Gtk.TreeViewColumn(column_title, renderer, text=i)
             column.set_min_width(100)  # Ustaw szerokość kolumny
             column.set_resizable(True)
@@ -81,6 +122,8 @@ class MealTypeWindow(Gtk.Window):
         self.scrolled_window.set_min_content_width(600)
         self.scrolled_window.add(self.recipe_tree_view)
         self.grid.attach(self.scrolled_window, 0, 1, 3, 1)
+
+        self.set_default_size(1897, 927)  # Ustawienie rozmiaru okna przy przejściu do ekranu z przepisami
 
         self.show_all()
 
@@ -95,6 +138,11 @@ class MealTypeWindow(Gtk.Window):
         self.search_recipes()
 
     def on_search_button_clicked(self, button):
+        self.search_recipes()
+
+    def on_tag_button_clicked(self, button):
+        tag_text = button.get_label()
+        self.search_entry.set_text(tag_text)
         self.search_recipes()
 
     def search_recipes(self):
@@ -126,13 +174,22 @@ class MealTypeWindow(Gtk.Window):
             )
 
             mycursor = mydb.cursor()
-            query = f"SELECT Id_posilku, Nazwa, Obraz, Czas_przygotowania, Skladniki, Sposob_przygotowania, Tagi FROM {table_name} WHERE nazwa LIKE %s"
-            mycursor.execute(query, (f"%{search_text}%",))
+            query = f"""
+                SELECT Id_posilku, Nazwa, Obraz, Czas_przygotowania, Skladniki, Sposob_przygotowania, Tagi 
+                FROM {table_name} 
+                WHERE 
+                    Nazwa LIKE %s OR 
+                    Czas_przygotowania LIKE %s OR 
+                    Skladniki LIKE %s OR 
+                    Sposob_przygotowania LIKE %s OR 
+                    Tagi LIKE %s
+            """
+            search_term = f"%{search_text}%"
+            mycursor.execute(query, (search_term, search_term, search_term, search_term, search_term))
 
             result = mycursor.fetchall()
             if result:
-                formatted_recipes = [list(map(str, recipe)) for recipe in
-                                     result]  # Konwertuj każdą tuplę na listę ciągów znaków
+                formatted_recipes = [list(map(str, recipe)) for recipe in result]
                 self.create_recipe_screen(formatted_recipes)
             else:
                 self.display_no_results_message()
