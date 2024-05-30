@@ -88,12 +88,11 @@ class MealTypeWindow(Gtk.Window):
         self.show_all()
 
     def load_tags(self):
+        mydb = None  # Zainicjuj mydb na None
         try:
-            # Odczyt konfiguracji z pliku JSON
-            with open('config.json') as config_file:
+            with open('/home/oul23/Academy/AEH/Python/51453_514321_51449_56202_53381/config.json') as config_file:
                 config = json.load(config_file)
 
-            # Połączenie z bazą danych
             mydb = mysql.connector.connect(
                 host=config['db_host'],
                 user=config['db_user'],
@@ -102,8 +101,10 @@ class MealTypeWindow(Gtk.Window):
             )
 
             mycursor = mydb.cursor()
-            # Zapytanie SQL, które pobiera unikalne tagi z różnych tabel
-            query = "SELECT DISTINCT Tagi FROM (SELECT Tagi FROM sniadania UNION ALL SELECT Tagi FROM obiady UNION ALL SELECT Tagi FROM kolacje) as all_tags"
+            query = """
+                SELECT DISTINCT Tagi 
+                FROM (SELECT Tagi FROM sniadania UNION ALL SELECT Tagi FROM obiady UNION ALL SELECT Tagi FROM kolacje) as all_tags
+            """
             mycursor.execute(query)
 
             result = mycursor.fetchall()
@@ -113,17 +114,17 @@ class MealTypeWindow(Gtk.Window):
                     words = tag.strip().split()
                     tags.update(words)
 
-            # Tworzenie przycisków dla każdego tagu
             for tag in tags:
                 button = Gtk.Button(label=tag.strip())
                 button.connect("clicked", self.on_tag_button_clicked)
                 self.flowbox.add(button)
 
+        except FileNotFoundError as fnf_error:
+            self.display_error_message(f"File not found: {fnf_error}")
         except Error as e:
             self.display_error_message(str(e))
         finally:
-            # Zamknięcie połączenia z bazą danych
-            if mydb.is_connected():
+            if mydb and mydb.is_connected():
                 mydb.close()
 
     def create_recipe_screen(self, recipes):
