@@ -1,3 +1,7 @@
+Wymagane zależności:
+    python3
+    python3-gi
+    python3-mysql.connector
 Instrukcja uruchomienia:
 1. Pobierz wszystkie pliki.
 2. Przenieść pobrane pliki do katalogu domowego /Home/user/przepisy
