@@ -21,6 +21,8 @@ Categories=Utility;
    chmod +x ~/Desktop/przepisy.desktop
 6. Uruchom program, klikając w ikonę.
 
+Jeśli program uruchamiając z ikony nie działa prawidłowo, uruchom z terminala wpisując komendę python3 project_przepisy.py (Pamiętaj aby być w tym samym katalogu co program).
+
 Instrukcja użytkowania aplikacji Przepisy:
 1. Na ekranie startowym wyświetla się menu z wyszukiwarką przepisów. Aby wyszukać przepis, w pierwszej kolejności użytkownik musi wybrać rodzaj posiłku spośród trzech dostępnych opcji na liście rozwijanej.
 2. W celu wyszukiwania przepisu użytkownik może wcisnąć klawisz Enter po wybraniu rodzaju posiłku lub użyć do tego dedykowanego przycisku "Wyszukaj przepis", który znajduje się po prawej stronie pola z wyborem rodzaju posiłku.
